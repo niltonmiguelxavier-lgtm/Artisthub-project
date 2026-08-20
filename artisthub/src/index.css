@@ -1,0 +1,56 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+  body {
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  ::selection {
+    background-color: #D4A24E;
+    color: #0B0A0D;
+  }
+  *:focus-visible {
+    outline: 2px solid #D4A24E;
+    outline-offset: 2px;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+    }
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: 'Fraunces', serif;
+  }
+  .font-mono-data {
+    font-family: 'IBM Plex Mono', monospace;
+  }
+}
+
+/* Waveform — ArtistHub's signature progress motif.
+   A series of vertical bars of varying height, filled left-to-right
+   by percentage, evoking an audio waveform / mixing-desk meter. */
+.waveform {
+  display: flex;
+  align-items: flex-end;
+  gap: 3px;
+  height: 28px;
+  width: 100%;
+}
+.waveform-bar {
+  flex: 1 1 0;
+  background: #2A2632;
+  border-radius: 2px;
+  transition: background-color 300ms ease;
+}
+.waveform-bar[data-filled='true'] {
+  background: #D4A24E;
+}
