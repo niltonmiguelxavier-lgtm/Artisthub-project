@@ -1,0 +1,58 @@
+import type { Opportunity } from '../types';
+
+export const opportunities: Opportunity[] = [
+  {
+    id: 'opp-1',
+    title: 'Festival Azgo 2026',
+    organization: 'Associação Cultural Azgo',
+    category: 'festival',
+    location: 'Maputo, Moçambique',
+    date: '2026-10-18',
+    description: 'Palco emergente para artistas moçambicanos com produção profissional e cobertura de imprensa.',
+  },
+  {
+    id: 'opp-2',
+    title: 'Colaboração — EP conjunto',
+    organization: 'Ivy Cumbane',
+    category: 'colaboracao',
+    location: 'Remoto / Beira',
+    date: '2026-09-05',
+    description: 'Produtora procura vocalista para faixa de fusão entre amapiano e marrabenta.',
+  },
+  {
+    id: 'opp-3',
+    title: 'Concurso Novos Talentos SADC',
+    organization: 'Rede Musical SADC',
+    category: 'concurso',
+    location: 'Regional (SADC)',
+    date: '2026-11-02',
+    description: 'Concurso regional com prémio em equipamento de estúdio e distribuição digital gratuita por 1 ano.',
+  },
+  {
+    id: 'opp-4',
+    title: 'Campanha de marca — Bebida energética Vuka',
+    organization: 'Vuka Beverages',
+    category: 'marca',
+    location: 'Maputo, Moçambique',
+    date: '2026-09-20',
+    description: 'Procura de artista emergente para campanha digital de lançamento de produto.',
+  },
+  {
+    id: 'opp-5',
+    title: 'Sessão de produção com Beat Yenga',
+    organization: 'Estúdio Yenga',
+    category: 'produtor',
+    location: 'Matola, Moçambique',
+    date: '2026-09-12',
+    description: 'Produtor com créditos internacionais disponível para sessões de gravação e mistura.',
+  },
+  {
+    id: 'opp-6',
+    title: 'Show — Noite de Marrabenta',
+    organization: 'Casa das Artes',
+    category: 'show',
+    location: 'Xai-Xai, Moçambique',
+    date: '2026-09-27',
+    description: 'Espectáculo dedicado a novas vozes da marrabenta contemporânea.',
+  },
+];
