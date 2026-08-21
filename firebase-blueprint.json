@@ -1,0 +1,154 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User account and role information",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "role": { "type": "string", "enum": ["artist", "organizer", "fan"] },
+        "displayName": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["uid", "email", "role", "createdAt"]
+    },
+    "Artist": {
+      "title": "Artist",
+      "description": "Public and private artist profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "stageName": { "type": "string", "maxLength": 128 },
+        "fullName": { "type": "string", "maxLength": 128 },
+        "handle": { "type": "string", "maxLength": 128 },
+        "avatarUrl": { "type": "string", "maxLength": 1024 },
+        "coverUrl": { "type": "string", "maxLength": 1024 },
+        "bio": { "type": "string", "maxLength": 4096 },
+        "location": { "type": "string", "maxLength": 128 },
+        "followers": { "type": "number" },
+        "verified": { "type": "boolean" },
+        "subscriptionTier": { "type": "string", "enum": ["free", "pro"] },
+        "subscriptionStatus": { "type": "string", "enum": ["active", "inactive", "canceled"] }
+      },
+      "required": ["id", "stageName", "handle"]
+    },
+    "Track": {
+      "title": "Track",
+      "description": "Uploaded song, beat, or release metadata",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "coverUrl": { "type": "string", "maxLength": 1024 },
+        "audioUrl": { "type": "string", "maxLength": 1024 },
+        "type": { "type": "string", "enum": ["single", "ep", "album", "colaboracao"] },
+        "releaseDate": { "type": "string", "maxLength": 64 },
+        "streams": { "type": "number" },
+        "status": { "type": "string", "enum": ["lancada", "agendada", "rascunho"] },
+        "revenue": { "type": "number" }
+      },
+      "required": ["id", "artistId", "title", "type", "status"]
+    },
+    "Product": {
+      "title": "Product",
+      "description": "Digital product, beat, or merchandise item in store",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "description": { "type": "string", "maxLength": 2048 },
+        "category": { "type": "string", "enum": ["beats", "exclusive_tracks", "merchandise"] },
+        "price": { "type": "number" },
+        "coverUrl": { "type": "string", "maxLength": 1024 },
+        "previewAudioUrl": { "type": "string", "maxLength": 1024 },
+        "digitalFileUrl": { "type": "string", "maxLength": 1024 },
+        "isAvailable": { "type": "boolean" }
+      },
+      "required": ["id", "artistId", "title", "category", "price"]
+    },
+    "Opportunity": {
+      "title": "Opportunity",
+      "description": "Call for artists, festival line-up, or showcase submission slot",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "organizerId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "organization": { "type": "string", "maxLength": 256 },
+        "category": { "type": "string" },
+        "location": { "type": "string", "maxLength": 256 },
+        "date": { "type": "string", "maxLength": 64 },
+        "description": { "type": "string", "maxLength": 4096 },
+        "status": { "type": "string", "enum": ["aberta", "encerrada"] }
+      },
+      "required": ["id", "title", "organization", "category", "location", "date", "description"]
+    },
+    "Submission": {
+      "title": "Submission",
+      "description": "Artist application to an opportunity slot",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "opportunityId": { "type": "string", "maxLength": 128 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "artistName": { "type": "string", "maxLength": 128 },
+        "artistHandle": { "type": "string", "maxLength": 128 },
+        "appliedAt": { "type": "string", "maxLength": 64 },
+        "status": { "type": "string", "enum": ["pendente", "aprovada", "rejeitada"] }
+      },
+      "required": ["id", "opportunityId", "artistId", "artistName", "appliedAt", "status"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Digital purchase and download receipt",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "productId": { "type": "string", "maxLength": 128 },
+        "productTitle": { "type": "string", "maxLength": 256 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "buyerEmail": { "type": "string", "maxLength": 256 },
+        "amount": { "type": "number" },
+        "status": { "type": "string", "enum": ["completed", "pending"] },
+        "downloadToken": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "productId", "artistId", "buyerEmail", "amount", "status", "downloadToken", "createdAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "User accounts and roles"
+    },
+    "/artists/{artistId}": {
+      "schema": "Artist",
+      "description": "Artist public and management profiles"
+    },
+    "/tracks/{trackId}": {
+      "schema": "Track",
+      "description": "Musical catalogue and releases"
+    },
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Digital store products and beats"
+    },
+    "/opportunities/{opportunityId}": {
+      "schema": "Opportunity",
+      "description": "Festivals and booking opportunities"
+    },
+    "/submissions/{submissionId}": {
+      "schema": "Submission",
+      "description": "Artist applications to opportunities"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Digital sales and purchase history"
+    }
+  }
+}

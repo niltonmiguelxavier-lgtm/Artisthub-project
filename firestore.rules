@@ -1,0 +1,68 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Users
+    match /users/{userId} {
+      allow read: if isSignedIn();
+      allow write: if isOwner(userId);
+    }
+
+    // Artists (Public read for profile views, owner edit)
+    match /artists/{artistId} {
+      allow read: if true;
+      allow write: if isOwner(artistId);
+    }
+
+    // Tracks (Public read for player/catalogue, artist edit)
+    match /tracks/{trackId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // YouTube / Media items
+    match /youtube_videos/{videoId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Products
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Opportunities
+    match /opportunities/{opportunityId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // Submissions / Applications
+    match /submissions/{submissionId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if isSignedIn();
+    }
+  }
+}
