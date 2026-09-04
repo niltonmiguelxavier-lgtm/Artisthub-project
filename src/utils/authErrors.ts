@@ -51,10 +51,11 @@ export function parseAuthError(err: any): AuthErrorResult {
     code === 'auth/unauthorized-domain' ||
     message.includes('unauthorized-domain')
   ) {
+    const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'artisthub-projectn.vercel.app';
     return {
       isCancellation: false,
       message: 'Domínio Web não autorizado no Firebase.',
-      details: 'Adiciona o domínio atual na lista de domínios autorizados na consola Firebase Authentication.',
+      details: `O domínio "${currentHost}" precisa de ser adicionado à lista de "Domínios Autorizados" na consola Firebase (Authentication > Definições > Domínios autorizados).`,
     };
   }
 
