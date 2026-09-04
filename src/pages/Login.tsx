@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Mail, Lock, AlertCircle } from 'lucide-react';
+import { parseAuthError } from '../utils/authErrors';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -26,8 +27,17 @@ export default function Login() {
       await loginWithGoogle('artist');
       navigate(from, { replace: true });
     } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      setError('Falha ao iniciar sessão com o Google: ' + (err.message || 'Tenta novamente.'));
+      const parsed = parseAuthError(err);
+      if (parsed.isCancellation) {
+        // Cancelamento normal do utilizador (fecho de janela pop-up) — não logar como erro fatal
+        console.info('Google Sign-In cancelado pelo utilizador.');
+        return;
+      }
+      console.warn('Google Sign-In aviso:', err);
+      setError(parsed.message);
+      if (parsed.details) {
+        setErrorDetails(parsed.details);
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -47,16 +57,10 @@ export default function Login() {
       await login(email, password);
       navigate(from, { replace: true });
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('O fornecedor Email/Palavra-passe não está ativado na consola Firebase.');
-        setErrorDetails('Por favor entra utilizando o botão "Continuar com o Google" acima.');
-      } else if (err.code === 'auth/invalid-credential' || err.code === 'auth/wrong-password') {
-        setError('Email ou palavra-passe incorretos.');
-      } else if (err.code === 'auth/user-not-found') {
-        setError('Não existe conta com este email.');
-      } else {
-        setError('Falha ao iniciar sessão: ' + (err.message || 'Tenta novamente.'));
+      const parsed = parseAuthError(err);
+      setError(parsed.message);
+      if (parsed.details) {
+        setErrorDetails(parsed.details);
       }
     } finally {
       setSubmitting(false);

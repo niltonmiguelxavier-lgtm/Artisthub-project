@@ -5,6 +5,7 @@ import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
 import { Mail, Lock, User, Building2, Music, AlertCircle } from 'lucide-react';
 import type { UserRole } from '../types';
+import { parseAuthError } from '../utils/authErrors';
 
 export default function Register() {
   const [stageName, setStageName] = useState('');
@@ -26,8 +27,17 @@ export default function Register() {
       await loginWithGoogle(role);
       navigate('/dashboard');
     } catch (err: any) {
-      console.error('Google Sign-In error:', err);
-      setError('Falha ao registar com o Google: ' + (err.message || 'Tenta novamente.'));
+      const parsed = parseAuthError(err);
+      if (parsed.isCancellation) {
+        // Cancelamento normal do utilizador (fecho da janela Google) — não logar como erro fatal
+        console.info('Registo com Google cancelado pelo utilizador.');
+        return;
+      }
+      console.warn('Registo com Google aviso:', err);
+      setError(parsed.message);
+      if (parsed.details) {
+        setErrorDetails(parsed.details);
+      }
     } finally {
       setGoogleLoading(false);
     }
@@ -52,14 +62,10 @@ export default function Register() {
       await register(email, password, stageName, role);
       navigate('/dashboard');
     } catch (err: any) {
-      console.error(err);
-      if (err.code === 'auth/operation-not-allowed') {
-        setError('O método Email/Palavra-passe não está ativado na consola Firebase.');
-        setErrorDetails('Por favor utiliza o botão "Registar com o Google" acima.');
-      } else if (err.code === 'auth/email-already-in-use') {
-        setError('Este email já está registado. Tenta iniciar sessão.');
-      } else {
-        setError('Erro ao criar conta: ' + (err.message || 'Verifica os dados introduzidos.'));
+      const parsed = parseAuthError(err);
+      setError(parsed.message);
+      if (parsed.details) {
+        setErrorDetails(parsed.details);
       }
     } finally {
       setSubmitting(false);

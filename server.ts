@@ -99,8 +99,8 @@ app.get('/api/zumbopay/config', (req, res) => {
     merchantId: merchantId || null,
     environment: isLive ? 'live' : isTest ? 'test' : 'simulation',
     walletMpesaConfigured: !!process.env.ZUMBOPAY_WALLET_MPESA,
-    walletEmolaConfigured: !!process.env.ZUMBOPAY_WALLET_EMOLA,
-    walletCardConfigured: !!process.env.ZUMBOPAY_WALLET_CARD,
+    walletEmolaConfigured: !!(process.env.ZUMBOPAY_WALLET_EMOLA || process.env.ZUMBOPAY_WALLET_MPESA),
+    walletCardConfigured: !!(process.env.ZUMBOPAY_WALLET_CARD || process.env.ZUMBOPAY_WALLET_MPESA),
     webhookConfigured: !!process.env.ZUMBOPAY_WEBHOOK_SECRET,
     channels: [
       { id: 'mpesa', name: 'M-Pesa (Vodacom)', prefix: ['84', '85'], currency: 'MZN' },
@@ -154,7 +154,7 @@ app.post('/api/zumbopay/charge', async (req, res) => {
     const walletId =
       channel === 'mpesa'
         ? process.env.ZUMBOPAY_WALLET_MPESA
-        : process.env.ZUMBOPAY_WALLET_EMOLA;
+        : (process.env.ZUMBOPAY_WALLET_EMOLA || process.env.ZUMBOPAY_WALLET_MPESA);
 
     // If live or test API key is configured with wallet, call ZumboPay API
     if (apiKey && walletId) {
@@ -347,7 +347,7 @@ app.post('/api/zumbopay/payout', async (req, res) => {
     const walletId =
       method === 'mpesa'
         ? process.env.ZUMBOPAY_WALLET_MPESA
-        : process.env.ZUMBOPAY_WALLET_EMOLA;
+        : (process.env.ZUMBOPAY_WALLET_EMOLA || process.env.ZUMBOPAY_WALLET_MPESA);
 
     if (apiKey && walletId) {
       const response = await fetch(`${ZUMBOPAY_API_URL}/payouts`, {
