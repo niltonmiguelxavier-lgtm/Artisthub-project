@@ -8,12 +8,15 @@ import DashboardLayout from './layouts/DashboardLayout';
 import ProtectedRoute from './components/ProtectedRoute';
 
 import Landing from './pages/Landing';
+import Feed from './pages/Feed';
 import ArtistProfile from './pages/ArtistProfile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import VerifyEmail from './pages/VerifyEmail';
 import StoreSuccess from './pages/StoreSuccess';
+import ExploreArtists from './pages/ExploreArtists';
+import Listen from './pages/Listen';
 
 import Dashboard from './pages/Dashboard';
 import Career from './pages/Career';
@@ -25,15 +28,19 @@ import Opportunities from './pages/Opportunities';
 import Store from './pages/Store';
 import Documents from './pages/Documents';
 import Settings from './pages/Settings';
+import Messages from './pages/Messages';
 
 export default function App() {
   return (
     <AuthProvider>
       <AudioProvider>
         <Routes>
-          {/* Public-facing pages (Landing, Public Artist Profile, Store, Auth) */}
+          {/* Public-facing pages (Landing, Feed, Public Artist Profile, Store, Auth, Listen) */}
           <Route element={<PublicLayout />}>
             <Route path="/" element={<Landing />} />
+            <Route path="/feed" element={<Feed />} />
+            <Route path="/listen" element={<Listen />} />
+            <Route path="/artists" element={<ExploreArtists />} />
             <Route path="/artist/:handle" element={<ArtistProfile />} />
             <Route path="/store" element={<Store />} />
             <Route path="/store/success" element={<StoreSuccess />} />
@@ -57,8 +64,11 @@ export default function App() {
             <Route path="/promotion" element={<Promotion />} />
             <Route path="/fans" element={<Fans />} />
             <Route path="/earnings" element={<Earnings />} />
+            <Route path="/artists-hub" element={<ExploreArtists />} />
             <Route path="/opportunities" element={<Opportunities />} />
+            <Route path="/store" element={<Store />} />
             <Route path="/documents" element={<Documents />} />
+            <Route path="/messages" element={<Messages />} />
             <Route path="/settings" element={<Settings />} />
           </Route>
 

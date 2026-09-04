@@ -11,6 +11,8 @@ export default function StoreSuccess() {
   const price = searchParams.get('price') || '1500';
   const category = searchParams.get('category') || 'beats';
   const orderId = searchParams.get('orderId') || 'ord_' + Math.random().toString(36).substring(2, 10);
+  const method = searchParams.get('method') || 'zumbopay';
+  const zumbopayRef = searchParams.get('zumbopay_ref') || searchParams.get('orderId') || '';
   const [downloaded, setDownloaded] = useState(false);
 
   useEffect(() => {
@@ -47,16 +49,45 @@ export default function StoreSuccess() {
           Obrigado por apoiares a música independente. A tua transação foi concluída com sucesso.
         </p>
 
-        <div className="my-6 rounded-xl border border-ink-800 bg-ink-950 p-4 text-left">
+        <div className="my-6 rounded-xl border border-ink-800 bg-ink-950 p-4 text-left space-y-2.5">
           <div className="flex items-center justify-between border-b border-ink-850 pb-2.5">
             <span className="text-xs text-bone-400">Referência do Pedido</span>
             <span className="font-mono-data text-xs text-bone-200">{orderId}</span>
           </div>
-          <div className="flex items-center justify-between py-2.5 border-b border-ink-850">
-            <span className="text-xs text-bone-400">Produto</span>
-            <span className="font-medium text-xs text-bone-100">{title}</span>
+          {zumbopayRef && zumbopayRef !== orderId && (
+            <div className="flex items-center justify-between border-b border-ink-850 pb-2.5">
+              <span className="text-xs text-bone-400">Ref. ZumboPay</span>
+              <span className="font-mono-data text-xs text-teal-400 font-semibold">{zumbopayRef}</span>
+            </div>
+          )}
+          <div className="flex items-center justify-between border-b border-ink-850 pb-2.5">
+            <span className="text-xs text-bone-400">Método de Pagamento</span>
+            <span className="text-xs font-semibold uppercase text-bone-100 flex items-center gap-1.5">
+              {method === 'mpesa' ? (
+                <>
+                  <span className="inline-block h-2 w-2 rounded-full bg-red-500"></span>
+                  M-Pesa (Vodacom)
+                </>
+              ) : method === 'emola' ? (
+                <>
+                  <span className="inline-block h-2 w-2 rounded-full bg-amber-500"></span>
+                  e-Mola (Movitel)
+                </>
+              ) : method === 'card' ? (
+                <>
+                  <span className="inline-block h-2 w-2 rounded-full bg-cobalt-500"></span>
+                  Cartão MPGS (ZumboPay)
+                </>
+              ) : (
+                'Stripe Checkout'
+              )}
+            </span>
           </div>
-          <div className="flex items-center justify-between pt-2.5">
+          <div className="flex items-center justify-between border-b border-ink-850 pb-2.5">
+            <span className="text-xs text-bone-400">Produto</span>
+            <span className="font-medium text-xs text-bone-100 truncate max-w-[200px]">{title}</span>
+          </div>
+          <div className="flex items-center justify-between pt-1">
             <span className="text-xs text-bone-400">Total Pago</span>
             <span className="font-mono-data text-sm font-semibold text-teal-400">{formatCurrency(Number(price))}</span>
           </div>

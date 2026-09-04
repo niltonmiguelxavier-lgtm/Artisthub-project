@@ -1,6 +1,6 @@
 {
   "name": "ArtistHub",
-  "description": "Plataforma profissional de gestão e carreira musical com autenticação, upload de áudio, catálogo YouTube, loja digital com Stripe, oportunidades e subscrições PRO.",
+  "description": "Plataforma profissional de gestão e carreira musical com catálogo público de streaming (/listen), upload e gestão de faixas, YouTube, loja digital com pagamentos e subscrições PRO.",
   "requestFramePermissions": [],
   "majorCapabilities": [
     "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"

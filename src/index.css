@@ -4,10 +4,25 @@
 @layer base {
   html {
     scroll-behavior: smooth;
+    width: 100%;
+    min-height: 100%;
   }
   body {
     font-family: 'Inter', sans-serif;
     -webkit-font-smoothing: antialiased;
+    width: 100%;
+    min-height: 100%;
+    margin: 0;
+    padding: 0;
+    background-color: #0A0E14;
+    color: #F8FAFC;
+  }
+  #root {
+    width: 100%;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
   }
   ::selection {
     background-color: #3B7DD8;
@@ -43,9 +58,11 @@
   gap: 3px;
   height: 28px;
   width: 100%;
+  max-width: 100%;
 }
 .waveform-bar {
   flex: 1 1 0;
+  min-width: 0;
   background: #28303F;
   border-radius: 2px;
   transition: background-color 300ms ease;

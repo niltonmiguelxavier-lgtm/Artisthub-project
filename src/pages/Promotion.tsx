@@ -79,7 +79,7 @@ export default function Promotion() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Alcance Total" value="168,900" icon={Users} trend={{ value: '+28%', positive: true }} />
         <StatCard label="Cliques Gerados" value="7,220" icon={Target} trend={{ value: '+15%', positive: true }} />
         <StatCard label="Campanhas Ativas" value={campaigns.filter((c) => c.status === 'ativa').length.toString()} icon={Megaphone} />

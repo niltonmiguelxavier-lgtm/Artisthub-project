@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import Button from '../components/ui/Button';
 import Input from '../components/ui/Input';
+import ImageUpload from '../components/ui/ImageUpload';
 import Badge from '../components/ui/Badge';
 import {
   User,
@@ -13,12 +14,21 @@ import {
   ExternalLink,
   Crown,
   Zap,
+  Smartphone,
+  Check,
+  AlertCircle,
+  RefreshCw,
+  ArrowRight,
+  ShieldCheck,
 } from 'lucide-react';
 import { formatCurrency } from '../utils/format';
+import ZumboPayModal from '../components/payment/ZumboPayModal';
+import { getZumboPayConfig, type ZumboPayConfig } from '../services/zumbopayService';
 
 const tabs = [
   { id: 'profile', label: 'Perfil de Artista', icon: User },
   { id: 'subscription', label: 'Plano & Subscrição PRO', icon: Crown },
+  { id: 'zumbopay', label: 'ZumboPay & Pagamentos', icon: CreditCard },
   { id: 'notifications', label: 'Notificações', icon: Bell },
   { id: 'security', label: 'Segurança & Conta', icon: Shield },
 ];
@@ -45,6 +55,72 @@ export default function Settings() {
   const [spotify, setSpotify] = useState(artistProfile?.socials?.spotify || '');
 
   const isPro = artistProfile?.subscriptionTier === 'pro';
+
+  // ZumboPay & PRO state
+  const [isProModalOpen, setIsProModalOpen] = useState(false);
+  const [zumboConfig, setZumboConfig] = useState<ZumboPayConfig | null>(null);
+  const [validatingZumbo, setValidatingZumbo] = useState(false);
+  const [zumboValidateMsg, setZumboValidateMsg] = useState<string | null>(null);
+  const [payoutMethod, setPayoutMethod] = useState<'mpesa' | 'emola'>((artistProfile as any)?.payoutMethod || 'mpesa');
+  const [payoutPhone, setPayoutPhone] = useState((artistProfile as any)?.payoutPhone || '');
+  const [payoutSaveSuccess, setPayoutSaveSuccess] = useState(false);
+
+  React.useEffect(() => {
+    getZumboPayConfig().then(setZumboConfig).catch(console.warn);
+  }, []);
+
+  const handleTestZumboPay = async () => {
+    try {
+      setValidatingZumbo(true);
+      setZumboValidateMsg(null);
+      const res = await fetch('/api/zumbopay/validate');
+      const data = await res.json();
+      if (data.valid) {
+        setZumboValidateMsg(`✅ Conexão OK! Gateway operacional (${data.live ? 'Modo Produção' : 'Modo Simulado/Sandbox'}).`);
+      } else {
+        setZumboValidateMsg(`⚠️ ${data.message || 'Chaves em falta ou inválidas.'}`);
+      }
+    } catch (e: any) {
+      setZumboValidateMsg(`❌ Erro de ligação: ${e.message}`);
+    } finally {
+      setValidatingZumbo(false);
+    }
+  };
+
+  const handleSavePayoutSettings = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      setPayoutSaveSuccess(false);
+      await updateArtistProfile({
+        ...((artistProfile as any) || {}),
+        payoutMethod,
+        payoutPhone,
+      });
+      setPayoutSaveSuccess(true);
+      setTimeout(() => setPayoutSaveSuccess(false), 4000);
+    } catch (err) {
+      console.error(err);
+      alert('Erro ao guardar dados de levantamento.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleProZumboSuccess = async (paymentInfo: { reference: string; channel: string }) => {
+    try {
+      await updateArtistProfile({
+        subscriptionTier: 'pro',
+        subscriptionStatus: 'active',
+        verified: true,
+      });
+      setIsProModalOpen(false);
+      alert(`🎉 Plano ArtistHub PRO ativado via ${paymentInfo.channel.toUpperCase()}! Selo de verificação e uploads ilimitados desbloqueados.`);
+    } catch (e) {
+      console.error(e);
+      alert('Subscrição confirmada! Atualize a página para ver o novo estado.');
+    }
+  };
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -226,20 +302,24 @@ export default function Settings() {
                 placeholder="Afrobeat, Marrabenta, R&B"
               />
 
-              <div className="grid gap-4 sm:grid-cols-2">
-                <Input
-                  id="artist-avatar"
-                  label="URL da Foto de Perfil"
+              <div className="grid gap-5 sm:grid-cols-2 pt-2">
+                <ImageUpload
+                  id="artist-avatar-upload"
+                  label="Foto de Perfil do Artista"
                   value={avatarUrl}
-                  onChange={(e) => setAvatarUrl(e.target.value)}
-                  placeholder="https://..."
+                  onChange={(url) => setAvatarUrl(url)}
+                  storagePath={artistProfile?.id || user?.uid ? `artists/${artistProfile?.id || user?.uid}/avatar.webp` : undefined}
+                  aspectRatio="square"
+                  helperText="Upload direto para /artists/{id}/avatar.webp (JPG/PNG/WEBP máx. 5MB)"
                 />
-                <Input
-                  id="artist-cover"
-                  label="URL da Capa de Fundo"
+                <ImageUpload
+                  id="artist-cover-upload"
+                  label="Capa de Fundo do Perfil"
                   value={coverUrl}
-                  onChange={(e) => setCoverUrl(e.target.value)}
-                  placeholder="https://..."
+                  onChange={(url) => setCoverUrl(url)}
+                  storagePath={artistProfile?.id || user?.uid ? `artists/${artistProfile?.id || user?.uid}/cover.webp` : undefined}
+                  aspectRatio="banner"
+                  helperText="Upload direto para /artists/{id}/cover.webp (Banner 3:1)"
                 />
               </div>
 
@@ -357,25 +437,160 @@ export default function Settings() {
                     </ul>
                   </div>
 
-                  <div className="mt-6 pt-4 border-t border-ink-800">
+                  <div className="mt-6 pt-4 border-t border-ink-800 space-y-2">
                     {isPro ? (
-                      <div className="flex items-center justify-center gap-2 text-xs font-medium text-teal-400">
-                        <CheckCircle2 size={16} /> Subscrição PRO Ativa via Stripe
+                      <div className="flex items-center justify-center gap-2 text-xs font-medium text-teal-400 py-2">
+                        <CheckCircle2 size={16} /> Subscrição PRO Ativa
                       </div>
                     ) : (
-                      <Button
-                        variant="primary"
-                        className="w-full justify-center gap-2 py-3"
-                        onClick={() => handleSubscribePro('monthly')}
-                        disabled={checkoutLoading}
-                      >
-                        <Zap size={16} />
-                        {checkoutLoading ? 'A conectar ao Stripe...' : 'Subscrever PRO (Stripe)'}
-                      </Button>
+                      <>
+                        <Button
+                          variant="primary"
+                          className="w-full justify-center gap-2 py-3 shadow-glow-sm"
+                          onClick={() => setIsProModalOpen(true)}
+                        >
+                          <Smartphone size={16} className="text-teal-300" />
+                          Subscrever com M-Pesa / e-Mola (ZumboPay)
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          className="w-full justify-center gap-2 py-2 text-xs text-bone-300"
+                          onClick={() => handleSubscribePro('monthly')}
+                          disabled={checkoutLoading}
+                        >
+                          <CreditCard size={14} />
+                          {checkoutLoading ? 'A conectar...' : 'Pagar via Cartão / Stripe'}
+                        </Button>
+                      </>
                     )}
                   </div>
                 </div>
               </div>
+            </div>
+          )}
+
+          {activeTab === 'zumbopay' && (
+            <div className="rounded-2xl border border-ink-800 bg-ink-900 p-6 space-y-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-ink-800 pb-5">
+                <div>
+                  <h2 className="font-display text-lg text-bone-100 flex items-center gap-2">
+                    <CreditCard className="text-teal-400" size={20} />
+                    ZumboPay Payment Gateway
+                  </h2>
+                  <p className="text-xs text-bone-400 mt-1">
+                    Gateway oficial para pagamentos móveis em Moçambique (M-Pesa Vodacom e e-Mola Movitel) e cartões bancários MPGS.
+                  </p>
+                </div>
+                <Badge tone={zumboConfig?.isLive ? 'success' : 'progress'}>
+                  {zumboConfig?.isLive ? 'Live / Produção' : 'Simulação / Sandbox Ativo'}
+                </Badge>
+              </div>
+
+              {/* Canal Status Grid */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-bone-200">M-Pesa (Vodacom)</span>
+                    <span className="h-2 w-2 rounded-full bg-red-500"></span>
+                  </div>
+                  <p className="text-[11px] text-bone-400">Prefixo: 84 / 85. STK Push instantâneo com PIN no telemóvel.</p>
+                  <div className="text-[10px] text-teal-400 font-mono">Status: Ativo</div>
+                </div>
+
+                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-bone-200">e-Mola (Movitel)</span>
+                    <span className="h-2 w-2 rounded-full bg-amber-500"></span>
+                  </div>
+                  <p className="text-[11px] text-bone-400">Prefixo: 86 / 87. Notificação USSD direta para confirmação.</p>
+                  <div className="text-[10px] text-teal-400 font-mono">Status: Ativo</div>
+                </div>
+
+                <div className="rounded-xl border border-cobalt-500/20 bg-cobalt-500/5 p-4 space-y-2">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-semibold text-bone-200">Cartão Bancário</span>
+                    <span className="h-2 w-2 rounded-full bg-cobalt-500"></span>
+                  </div>
+                  <p className="text-[11px] text-bone-400">Mastercard / Visa via hosted checkout com 3D-Secure 2.0.</p>
+                  <div className="text-[10px] text-teal-400 font-mono">Status: Ativo</div>
+                </div>
+              </div>
+
+              {/* Connection Test */}
+              <div className="rounded-xl border border-ink-800 bg-ink-950 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  <div>
+                    <h3 className="text-xs font-semibold text-bone-200">Diagnóstico da API ZumboPay</h3>
+                    <p className="text-[11px] text-bone-400">
+                      Verifica a conectividade e autenticação com o endpoint v1.3.1.
+                    </p>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleTestZumboPay}
+                    disabled={validatingZumbo}
+                    className="gap-2 shrink-0"
+                  >
+                    <RefreshCw size={14} className={validatingZumbo ? 'animate-spin' : ''} />
+                    {validatingZumbo ? 'A testar...' : 'Testar Conexão API'}
+                  </Button>
+                </div>
+                {zumboValidateMsg && (
+                  <div className="rounded-lg bg-ink-900 border border-ink-800 p-2.5 text-xs text-bone-200">
+                    {zumboValidateMsg}
+                  </div>
+                )}
+              </div>
+
+              {/* Default Payout Phone Setting */}
+              <form onSubmit={handleSavePayoutSettings} className="rounded-xl border border-ink-800 bg-ink-950 p-4 space-y-4">
+                <div>
+                  <h3 className="text-xs font-semibold text-bone-100">Configuração de Levantamento para Artista</h3>
+                  <p className="text-[11px] text-bone-400 mt-0.5">
+                    Define o teu telemóvel padrão para receber pagamentos de vendas de beats, merch e royalties diretamente via ZumboPay Payout.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-medium text-bone-300 mb-1">Carteira Móvel Preferida</label>
+                    <select
+                      value={payoutMethod}
+                      onChange={(e) => setPayoutMethod(e.target.value as 'mpesa' | 'emola')}
+                      className="w-full rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-sm text-bone-100 focus:border-teal-500 focus:outline-none"
+                    >
+                      <option value="mpesa">M-Pesa (Vodacom 84/85)</option>
+                      <option value="emola">e-Mola (Movitel 86/87)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-medium text-bone-300 mb-1">Número de Telemóvel (+258)</label>
+                    <input
+                      type="tel"
+                      maxLength={9}
+                      placeholder={payoutMethod === 'mpesa' ? '84 123 4567' : '86 123 4567'}
+                      value={payoutPhone}
+                      onChange={(e) => setPayoutPhone(e.target.value.replace(/\D/g, '').slice(0, 9))}
+                      className="w-full rounded-xl border border-ink-700 bg-ink-900 px-3 py-2 text-sm font-mono text-bone-100 focus:border-teal-500 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                {payoutSaveSuccess && (
+                  <div className="flex items-center gap-2 text-xs text-teal-400">
+                    <CheckCircle2 size={14} /> Dados de levantamento guardados com sucesso!
+                  </div>
+                )}
+
+                <div className="flex justify-end">
+                  <Button type="submit" variant="primary" size="sm" disabled={saving}>
+                    {saving ? 'A guardar...' : 'Guardar Dados de Pagamento'}
+                  </Button>
+                </div>
+              </form>
             </div>
           )}
 
@@ -411,6 +626,26 @@ export default function Settings() {
           )}
         </div>
       </div>
+
+      {/* Modal ZumboPay para Subscrição PRO */}
+      <ZumboPayModal
+        isOpen={isProModalOpen}
+        onClose={() => setIsProModalOpen(false)}
+        title="Subscrição Mensal ArtistHub PRO"
+        amount={650}
+        currency="MZN"
+        orderType="pro_subscription"
+        orderId={`sub_pro_${Date.now()}`}
+        metadata={{
+          artistId: artistProfile?.id || user?.uid,
+          plan: 'monthly',
+        }}
+        onSuccess={handleProZumboSuccess}
+        onStripeFallback={() => {
+          setIsProModalOpen(false);
+          handleSubscribePro('monthly');
+        }}
+      />
     </div>
   );
 }

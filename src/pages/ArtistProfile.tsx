@@ -6,6 +6,7 @@ import { db, collection, getDocs, query, where } from '../lib/firebase';
 import ArtistAvatar from '../components/ArtistAvatar';
 import Button from '../components/ui/Button';
 import Badge from '../components/ui/Badge';
+import PageLoadingError from '../components/ui/PageLoadingError';
 import {
   MapPin,
   Users,
@@ -20,6 +21,7 @@ import {
   ShoppingBag,
   Heart,
   Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 import { currentArtist as fallbackArtist } from '../data/artists';
 import { initialTracks as fallbackTracks } from '../data/music';
@@ -37,33 +39,48 @@ export default function ArtistProfile() {
   const [videos, setVideos] = useState<YouTubeVideo[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [copied, setCopied] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchArtistData = async () => {
-      try {
-        setLoading(true);
+  const fetchArtistData = async () => {
+    let cancelled = false;
+    let timer: NodeJS.Timeout | null = null;
 
-        let targetArtist: Artist | null = null;
+    try {
+      setStatus('loading');
+      setError(null);
 
-        // Check if viewing authenticated user's own profile
-        if (currentAuthArtist && (currentAuthArtist.handle === handle || !handle)) {
-          targetArtist = currentAuthArtist;
-        } else {
-          // Query Firestore by handle
-          const q = query(collection(db, 'artists'), where('handle', '==', handle));
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            targetArtist = { id: snap.docs[0].id, ...snap.docs[0].data() } as Artist;
-          }
+      timer = setTimeout(() => {
+        if (!cancelled && status === 'loading') {
+          setError('Isto está a demorar mais do que o esperado. Tenta novamente.');
+          setStatus('error');
         }
+      }, 15000);
 
-        if (!targetArtist) {
-          targetArtist = fallbackArtist;
+      let targetArtist: Artist | null = null;
+
+      // Check if viewing authenticated user's own profile
+      if (currentAuthArtist && (currentAuthArtist.handle === handle || !handle)) {
+        targetArtist = currentAuthArtist;
+      } else {
+        // Query Firestore by handle
+        const q = query(collection(db, 'artists'), where('handle', '==', handle));
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          targetArtist = { id: snap.docs[0].id, ...snap.docs[0].data() } as Artist;
         }
+      }
+
+      if (!targetArtist) {
+        targetArtist = fallbackArtist;
+      }
+
+      if (!cancelled) {
         setArtist(targetArtist);
+      }
 
-        // Fetch released tracks for this artist
+      // Fetch released tracks for this artist
+      try {
         const tSnap = await getDocs(
           query(
             collection(db, 'tracks'),
@@ -72,48 +89,73 @@ export default function ArtistProfile() {
           )
         );
 
-        if (!tSnap.empty) {
-          setTracks(tSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Track)));
-        } else {
+        if (!cancelled) {
+          if (!tSnap.empty) {
+            setTracks(tSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Track)));
+          } else {
+            setTracks(fallbackTracks.filter((t) => t.status === 'lancada'));
+          }
+        }
+      } catch (tErr) {
+        if (!cancelled) {
           setTracks(fallbackTracks.filter((t) => t.status === 'lancada'));
         }
+      }
 
-        // Fetch videos
+      // Fetch videos
+      try {
         const vSnap = await getDocs(
           query(collection(db, 'videos'), where('artistId', '==', targetArtist.id))
         );
-        if (!vSnap.empty) {
-          setVideos(vSnap.docs.map((d) => ({ id: d.id, ...d.data() } as YouTubeVideo)));
-        } else {
-          setVideos([
-            {
-              id: 'v-1',
-              artistId: targetArtist.id,
-              title: `${targetArtist.stageName} - Atuação ao Vivo & Videoclipe Oficial`,
-              youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
-              youtubeId: 'dQw4w9WgXcQ',
-              thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
-              addedAt: new Date().toISOString(),
-            },
-          ]);
+        if (!cancelled) {
+          if (!vSnap.empty) {
+            setVideos(vSnap.docs.map((d) => ({ id: d.id, ...d.data() } as YouTubeVideo)));
+          } else {
+            setVideos([
+              {
+                id: 'v-1',
+                artistId: targetArtist.id,
+                title: `${targetArtist.stageName} - Atuação ao Vivo & Videoclipe Oficial`,
+                youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                youtubeId: 'dQw4w9WgXcQ',
+                thumbnailUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+                addedAt: new Date().toISOString(),
+              },
+            ]);
+          }
         }
+      } catch (vErr) {
+        // fallback video
+      }
 
-        // Fetch store products for this artist
+      // Fetch store products for this artist
+      try {
         const pSnap = await getDocs(
           query(collection(db, 'products'), where('artistId', '==', targetArtist.id))
         );
-        if (!pSnap.empty) {
+        if (!cancelled && !pSnap.empty) {
           setProducts(pSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Product)));
         }
-      } catch (e) {
-        console.warn('Error fetching artist public profile data:', e);
+      } catch (pErr) {
+        // Ignore product fetch error
+      }
+
+      if (!cancelled) {
+        setStatus('success');
+      }
+    } catch (e: any) {
+      if (!cancelled) {
+        console.warn('Error fetching artist public profile data, using fallback:', e);
         setArtist(fallbackArtist);
         setTracks(fallbackTracks.filter((t) => t.status === 'lancada'));
-      } finally {
-        setLoading(false);
+        setStatus('success');
       }
-    };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
 
+  useEffect(() => {
     fetchArtistData();
   }, [handle, currentAuthArtist]);
 
@@ -123,10 +165,27 @@ export default function ArtistProfile() {
     setTimeout(() => setCopied(false), 3000);
   };
 
+  if (status === 'loading' && !artist) {
+    return (
+      <div className="flex min-h-[60vh] flex-col items-center justify-center gap-3 text-bone-400">
+        <RefreshCw size={24} className="animate-spin text-cobalt-400" />
+        <p className="text-xs">A carregar perfil de artista...</p>
+      </div>
+    );
+  }
+
+  if (status === 'error' && !artist) {
+    return (
+      <div className="mx-auto max-w-xl py-12">
+        <PageLoadingError error={error} onRetry={fetchArtistData} />
+      </div>
+    );
+  }
+
   if (!artist) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center text-bone-400">
-        A carregar perfil de artista...
+      <div className="mx-auto max-w-xl py-12">
+        <PageLoadingError error="Perfil de artista não encontrado." onRetry={fetchArtistData} />
       </div>
     );
   }
@@ -143,18 +202,18 @@ export default function ArtistProfile() {
           )}
         </div>
 
-        <div className="relative px-6 pb-6 pt-0 sm:px-8">
-          <div className="-mt-16 mb-4 flex flex-col justify-between gap-4 sm:-mt-20 sm:flex-row sm:items-end">
-            <div className="flex items-end gap-4">
+        <div className="relative px-4 pb-6 pt-0 sm:px-8">
+          <div className="-mt-12 mb-4 flex flex-col justify-between gap-4 sm:-mt-20 sm:flex-row sm:items-end">
+            <div className="flex flex-col sm:flex-row sm:items-end gap-3.5 sm:gap-4">
               <ArtistAvatar
                 name={artist.stageName}
                 src={artist.avatarUrl}
-                size={96}
+                size={84}
                 verified={artist.verified || artist.subscriptionTier === 'pro'}
               />
-              <div className="mb-2">
+              <div className="mb-1 sm:mb-2 min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="font-display text-2xl font-bold text-bone-100 sm:text-3xl">
+                  <h1 className="font-display text-xl font-bold text-bone-100 sm:text-3xl break-words">
                     {artist.stageName}
                   </h1>
                 </div>
@@ -162,13 +221,13 @@ export default function ArtistProfile() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2.5">
-              <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5">
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="outline" size="sm" onClick={handleShare} className="gap-1.5 flex-1 sm:flex-initial justify-center">
                 <Share2 size={14} />
-                {copied ? 'Link Copiado!' : 'Partilhar Perfil'}
+                {copied ? 'Link Copiado!' : 'Partilhar'}
               </Button>
-              <Link to="/store">
-                <Button variant="primary" size="sm" className="gap-1.5 font-medium">
+              <Link to="/store" className="flex-1 sm:flex-initial">
+                <Button variant="primary" size="sm" className="gap-1.5 font-medium w-full justify-center">
                   <ShoppingBag size={14} />
                   Loja Oficial
                 </Button>
@@ -347,8 +406,8 @@ export default function ArtistProfile() {
             Adquire instrumentais exclusivos, produções e merchandise oficial diretamente do artista com entrega imediata.
           </p>
         </div>
-        <Link to="/store">
-          <Button variant="primary" className="gap-2 px-6 py-3 font-medium">
+        <Link to="/store" className="w-full sm:w-auto">
+          <Button variant="primary" className="w-full sm:w-auto justify-center gap-2 px-6 py-3 font-medium">
             <ShoppingBag size={16} />
             Explorar Loja de {artist.stageName}
           </Button>

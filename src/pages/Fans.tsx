@@ -14,7 +14,7 @@ export default function Fans() {
         <p className="mt-1 text-sm text-bone-400">Conhece a audiência que está a construir a tua carreira.</p>
       </div>
 
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         <StatCard label="Total de fãs" value={formatCompact(fanStats.total)} icon={Users} trend={{ value: `+${fanStats.weeklyGrowthPct}% esta semana`, positive: true }} />
         <StatCard label="Engagement" value={`${fanStats.engagementRate}%`} icon={TrendingUp} />
         <StatCard label="Música mais popular" value={fanStats.mostPopularTrack} icon={Music2} />

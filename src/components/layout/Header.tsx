@@ -19,7 +19,7 @@ export default function Header() {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex items-center justify-between gap-4 border-b border-ink-800 bg-ink-950/90 px-4 py-3.5 backdrop-blur lg:px-8">
+    <header className="sticky top-0 z-40 flex w-full shrink-0 items-center justify-between gap-4 border-b border-ink-800 bg-ink-950/95 px-4 py-3.5 backdrop-blur-md lg:px-8">
       <div className="hidden max-w-xs flex-1 items-center gap-2 rounded-full border border-ink-700 bg-ink-900 px-4 py-2 text-sm text-bone-400 sm:flex">
         <Search size={16} />
         <span>Pesquisar na tua carreira…</span>

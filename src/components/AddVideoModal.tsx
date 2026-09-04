@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Modal from './ui/Modal';
 import Button from './ui/Button';
 import Input from './ui/Input';
@@ -9,22 +9,45 @@ import type { YouTubeVideo } from '../types';
 interface AddVideoModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onVideoAdded: (video: Omit<YouTubeVideo, 'id'>) => Promise<void>;
+  onVideoAdded?: (video: Omit<YouTubeVideo, 'id'>) => Promise<void>;
+  onVideoUpdated?: (video: YouTubeVideo) => Promise<void>;
+  editingVideo?: YouTubeVideo | null;
   artistId: string;
 }
 
-export default function AddVideoModal({ isOpen, onClose, onVideoAdded, artistId }: AddVideoModalProps) {
+export default function AddVideoModal({
+  isOpen,
+  onClose,
+  onVideoAdded,
+  onVideoUpdated,
+  editingVideo,
+  artistId,
+}: AddVideoModalProps) {
   const [title, setTitle] = useState('');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const isEditing = Boolean(editingVideo);
+
+  useEffect(() => {
+    if (editingVideo) {
+      setTitle(editingVideo.title || '');
+      setYoutubeUrl(editingVideo.youtubeUrl || '');
+      setError('');
+    } else {
+      setTitle('');
+      setYoutubeUrl('');
+      setError('');
+    }
+  }, [editingVideo, isOpen]);
 
   const previewId = extractYouTubeId(youtubeUrl);
   const previewThumbnail = previewId ? getYouTubeThumbnail(previewId) : '';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!title || !youtubeUrl) {
+    if (!title.trim() || !youtubeUrl.trim()) {
       setError('Por favor preenche todos os campos.');
       return;
     }
@@ -39,14 +62,24 @@ export default function AddVideoModal({ isOpen, onClose, onVideoAdded, artistId 
       setSaving(true);
       setError('');
 
-      await onVideoAdded({
-        artistId,
-        title,
-        youtubeUrl,
-        youtubeId: yId,
-        thumbnailUrl: getYouTubeThumbnail(yId),
-        addedAt: new Date().toISOString(),
-      });
+      if (isEditing && editingVideo && onVideoUpdated) {
+        await onVideoUpdated({
+          ...editingVideo,
+          title: title.trim(),
+          youtubeUrl: youtubeUrl.trim(),
+          youtubeId: yId,
+          thumbnailUrl: getYouTubeThumbnail(yId),
+        });
+      } else if (onVideoAdded) {
+        await onVideoAdded({
+          artistId,
+          title: title.trim(),
+          youtubeUrl: youtubeUrl.trim(),
+          youtubeId: yId,
+          thumbnailUrl: getYouTubeThumbnail(yId),
+          addedAt: new Date().toISOString(),
+        });
+      }
 
       setTitle('');
       setYoutubeUrl('');
@@ -60,7 +93,11 @@ export default function AddVideoModal({ isOpen, onClose, onVideoAdded, artistId 
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Adicionar Vídeo do YouTube">
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={isEditing ? 'Editar Vídeo do YouTube' : 'Adicionar Vídeo do YouTube'}
+    >
       <form onSubmit={handleSubmit} className="space-y-4">
         {error && (
           <div className="flex items-center gap-2 rounded-xl border border-rose-400/30 bg-rose-400/10 p-3 text-xs text-rose-400">
@@ -105,10 +142,11 @@ export default function AddVideoModal({ isOpen, onClose, onVideoAdded, artistId 
             Cancelar
           </Button>
           <Button type="submit" variant="primary" disabled={saving}>
-            {saving ? 'A adicionar...' : 'Adicionar Vídeo'}
+            {saving ? 'A guardar...' : isEditing ? 'Guardar Alterações' : 'Adicionar Vídeo'}
           </Button>
         </div>
       </form>
     </Modal>
   );
 }
+

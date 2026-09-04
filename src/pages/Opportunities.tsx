@@ -8,9 +8,11 @@ import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import EmailVerificationPromptModal from '../components/EmailVerificationPromptModal';
-import { Briefcase, Plus, CheckCircle2, Sparkles, Star, Building2, AlertCircle } from 'lucide-react';
+import PageLoadingError from '../components/ui/PageLoadingError';
+import { Briefcase, Plus, CheckCircle2, Sparkles, Star, Building2, AlertCircle, RefreshCw } from 'lucide-react';
 import type { Opportunity, OpportunityCategory, OpportunityApplication } from '../types';
 import { opportunities as defaultOpportunities } from '../data/opportunities';
+import { createFeedPost } from '../services/feedService';
 
 const filterCategories: { label: string; value: OpportunityCategory | 'todas' }[] = [
   { label: 'Todas', value: 'todas' },
@@ -29,7 +31,8 @@ export default function Opportunities() {
   const [appliedIds, setAppliedIds] = useState<string[]>([]);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isVerifyPromptOpen, setIsVerifyPromptOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [error, setError] = useState<string | null>(null);
 
   // New opportunity form
   const [title, setTitle] = useState('');
@@ -54,33 +57,62 @@ export default function Opportunities() {
     setIsCreateModalOpen(true);
   };
 
-  useEffect(() => {
-    const loadOps = async () => {
-      try {
-        setLoading(true);
-        const snap = await getDocs(collection(db, 'opportunities'));
+  const loadOps = async () => {
+    let cancelled = false;
+    let timer: NodeJS.Timeout | null = null;
+
+    try {
+      setStatus('loading');
+      setError(null);
+
+      timer = setTimeout(() => {
+        if (!cancelled && status === 'loading') {
+          setError('Isto está a demorar mais do que o esperado. Tenta novamente.');
+          setStatus('error');
+        }
+      }, 15000);
+
+      const snap = await getDocs(collection(db, 'opportunities'));
+      if (!cancelled) {
         if (!snap.empty) {
           const ops = snap.docs.map((d) => ({ id: d.id, ...d.data() } as Opportunity));
           setOpportunities(ops);
         } else {
           setOpportunities(defaultOpportunities);
         }
-
-        // Load applications made by current artist
-        if (artistProfile?.id) {
-          const appSnap = await getDocs(collection(db, 'applications'));
-          const myApps = appSnap.docs
-            .map((d) => d.data() as OpportunityApplication)
-            .filter((a) => a.artistId === artistProfile.id)
-            .map((a) => a.opportunityId);
-          setAppliedIds(myApps);
-        }
-      } catch (e) {
-        setOpportunities(defaultOpportunities);
-      } finally {
-        setLoading(false);
       }
-    };
+
+      // Load applications made by current artist
+      if (artistProfile?.id) {
+        try {
+          const appSnap = await getDocs(collection(db, 'applications'));
+          if (!cancelled && !appSnap.empty) {
+            const myApps = appSnap.docs
+              .map((d) => d.data() as OpportunityApplication)
+              .filter((a) => a.artistId === artistProfile.id)
+              .map((a) => a.opportunityId);
+            setAppliedIds(myApps);
+          }
+        } catch (appErr) {
+          // ignore subquery warning
+        }
+      }
+
+      if (!cancelled) {
+        setStatus('success');
+      }
+    } catch (e: any) {
+      if (!cancelled) {
+        console.warn('Opportunities load notice, using fallback:', e);
+        setOpportunities(defaultOpportunities);
+        setStatus('success');
+      }
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  useEffect(() => {
     loadOps();
   }, [artistProfile?.id]);
 
@@ -135,6 +167,23 @@ export default function Opportunities() {
 
     try {
       await setDoc(doc(db, 'opportunities', opId), newOp);
+
+      // Automatically publish to Community Feed
+      createFeedPost({
+        artistId: user?.uid || 'org-001',
+        artistName: newOp.organization,
+        artistHandle: 'oportunidades',
+        artistVerified: true,
+        type: 'oportunidade',
+        content: `🌟 Nova convocatória aberta: "${newOp.title}" em ${newOp.location}. As candidaturas estão abertas para todos os artistas no ArtistHub!`,
+        relatedId: opId,
+        metadata: {
+          opportunityOrg: newOp.organization,
+          opportunityCategory: newOp.category,
+          opportunityLocation: newOp.location,
+          opportunityDate: newOp.date,
+        },
+      }).catch((err) => console.warn('Could not auto-post opportunity to feed:', err));
     } catch (e) {}
 
     setOpportunities((prev) => [newOp, ...prev]);
@@ -206,7 +255,14 @@ export default function Opportunities() {
       </div>
 
       {/* Opportunities List */}
-      {sortedOpportunities.length === 0 ? (
+      {status === 'loading' ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-3 text-xs text-bone-400">
+          <RefreshCw size={22} className="animate-spin text-cobalt-400" />
+          <span>A carregar oportunidades e concursos...</span>
+        </div>
+      ) : status === 'error' ? (
+        <PageLoadingError error={error} onRetry={loadOps} />
+      ) : sortedOpportunities.length === 0 ? (
         <EmptyState
           title="Nenhuma oportunidade encontrada"
           description="Volta mais tarde ou muda a categoria selecionada."
@@ -289,7 +345,7 @@ export default function Opportunities() {
             required
           />
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               id="opp-org"
               label="Nome da Organização *"
@@ -315,7 +371,7 @@ export default function Opportunities() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               id="opp-location"
               label="Localização"

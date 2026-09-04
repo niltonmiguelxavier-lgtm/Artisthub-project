@@ -13,6 +13,7 @@ import {
   type User,
 } from 'firebase/auth';
 import {
+  initializeFirestore,
   getFirestore,
   collection,
   doc,
@@ -26,7 +27,17 @@ import {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  increment,
 } from 'firebase/firestore';
+import {
+  getStorage,
+  ref,
+  uploadBytesResumable,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
+  type UploadTaskSnapshot,
+} from 'firebase/storage';
 
 /**
  * ==============================================================================
@@ -34,18 +45,6 @@ import {
  * ==============================================================================
  * 
  * Projecto administrado pela conta: artisthubmz@gmail.com
- *
- * As credenciais são carregadas prioritariamente a partir das variáveis de
- * ambiente (.env, prefixadas com VITE_FIREBASE_).
- * 
- * NOTA SOBRE A PERSONALIZAÇÃO DO EMAIL DE VERIFICAÇÃO:
- * O template do email de verificação (Assunto, Nome do Remetente "ArtistHub",
- * corpo do email em português e link de ação) deve ser configurado manualmente
- * na Consola do Firebase:
- * 1. Acede a https://console.firebase.google.com/ com a conta artisthubmz@gmail.com
- * 2. Seleciona o projecto ArtistHub
- * 3. Vai a "Authentication" -> "Templates" -> "Email address verification"
- * 4. Personaliza o nome do remetente para "ArtistHub" e o texto em Português.
  * ==============================================================================
  */
 
@@ -66,9 +65,27 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Initialize Firestore with specific database ID if configured
-const customDatabaseId = import.meta.env.VITE_FIREBASE_DATABASE_ID || fallbackConfig.firestoreDatabaseId;
-export const db = customDatabaseId ? getFirestore(app, customDatabaseId) : getFirestore(app);
+// Initialize Firestore with specific database ID and robust long-polling auto-detection for iframe environments
+const customDatabaseId = (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) || fallbackConfig.firestoreDatabaseId;
+
+let firestoreInstance;
+try {
+  firestoreInstance = initializeFirestore(
+    app,
+    {
+      experimentalAutoDetectLongPolling: true,
+      ignoreUndefinedProperties: true,
+    },
+    customDatabaseId || undefined
+  );
+} catch {
+  firestoreInstance = customDatabaseId ? getFirestore(app, customDatabaseId) : getFirestore(app);
+}
+
+export const db = firestoreInstance;
+
+// Initialize Firebase Storage
+export const storage = getStorage(app, firebaseConfig.storageBucket ? `gs://${firebaseConfig.storageBucket}` : undefined);
 
 export const googleProvider = new GoogleAuthProvider();
 
@@ -93,6 +110,14 @@ export {
   orderBy,
   onSnapshot,
   serverTimestamp,
+  increment,
+  // Storage
+  ref,
+  uploadBytesResumable,
+  uploadBytes,
+  getDownloadURL,
+  deleteObject,
 };
-export type { User };
+export type { User, UploadTaskSnapshot };
+
 

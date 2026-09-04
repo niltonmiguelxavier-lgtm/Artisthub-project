@@ -55,6 +55,8 @@ export interface Task {
 export interface Track {
   id: string;
   artistId: string;
+  artistName?: string;
+  artistHandle?: string;
   title: string;
   coverUrl?: string;
   audioUrl?: string;
@@ -149,7 +151,7 @@ export interface EarningsHistoryItem {
   label: string;
   date: string;
   amount: number;
-  type: 'royalty' | 'venda' | 'doacao';
+  type: 'royalty' | 'venda' | 'doacao' | 'saque';
 }
 
 export interface FanStats {
@@ -196,3 +198,35 @@ export interface OpportunityApplication {
   status: 'pendente' | 'aprovada' | 'rejeitada';
   notes?: string;
 }
+
+export type FeedPostType = 'musica' | 'video' | 'texto' | 'produto' | 'oportunidade';
+
+export interface FeedPost {
+  id: string;
+  artistId: string;
+  artistName?: string;
+  artistHandle?: string;
+  artistAvatarUrl?: string;
+  artistVerified?: boolean;
+  type: FeedPostType;
+  content: string; // texto da publicação, ou legenda
+  mediaUrl?: string; // link do YouTube, capa da música, imagem do produto
+  relatedId?: string; // ID da faixa/produto/oportunidade relacionada, se aplicável
+  metadata?: {
+    trackTitle?: string;
+    audioUrl?: string;
+    audioFormat?: string;
+    youtubeId?: string;
+    youtubeUrl?: string;
+    productPrice?: number;
+    productCategory?: string;
+    opportunityOrg?: string;
+    opportunityCategory?: string;
+    opportunityLocation?: string;
+    opportunityDate?: string;
+  };
+  createdAt: string;
+  likesCount: number;
+  commentsCount: number;
+}
+

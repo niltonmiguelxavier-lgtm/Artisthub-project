@@ -1,0 +1,97 @@
+import type { FeedPost } from '../types';
+
+export const initialFeedPosts: FeedPost[] = [
+  {
+    id: 'feed-1',
+    artistId: 'artist-001',
+    artistName: 'Nélio Kaya',
+    artistHandle: 'nelio-kaya',
+    artistAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    artistVerified: true,
+    type: 'musica',
+    content: '🔥 Acabei de lançar o meu novo single "Noite de Verão"! Uma fusão fresca de Afrobeat com elementos tradicionais de Marrabenta. Ouve agora em primeira mão no player abaixo e diz-me o que achas!',
+    mediaUrl: 'https://images.unsplash.com/photo-1614613535308-eb5fbd3d2c17?w=800&auto=format&fit=crop&q=80',
+    relatedId: 'track-001',
+    metadata: {
+      trackTitle: 'Noite de Verão (Single)',
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-1.mp3',
+      audioFormat: 'mp3',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 45).toISOString(), // 45 min ago
+    likesCount: 28,
+    commentsCount: 7,
+  },
+  {
+    id: 'feed-2',
+    artistId: 'artist-002',
+    artistName: 'Ivy Cumbane',
+    artistHandle: 'ivy-cumbane',
+    artistAvatarUrl: 'https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?w=400&auto=format&fit=crop&q=80',
+    artistVerified: false,
+    type: 'video',
+    content: '🎬 Vídeo oficial do concerto ao vivo no Festival da Beira já disponível! Obrigado a todos os que estiveram presentes a vibrar do início ao fim.',
+    mediaUrl: 'https://img.youtube.com/vi/dQw4w9WgXcQ/hqdefault.jpg',
+    relatedId: 'video-001',
+    metadata: {
+      youtubeId: 'dQw4w9WgXcQ',
+      youtubeUrl: 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 4).toISOString(), // 4 hours ago
+    likesCount: 42,
+    commentsCount: 12,
+  },
+  {
+    id: 'feed-3',
+    artistId: 'artist-001',
+    artistName: 'Nélio Kaya',
+    artistHandle: 'nelio-kaya',
+    artistAvatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
+    artistVerified: true,
+    type: 'texto',
+    content: 'A gravar coisas novas no estúdio esta semana 🎙️✨ Experimentando novas progressões de acordes e metais ao vivo. Mal posso esperar para vos mostrar as próximas colaborações!',
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 18).toISOString(), // 18 hours ago
+    likesCount: 19,
+    commentsCount: 4,
+  },
+  {
+    id: 'feed-4',
+    artistId: 'artist-003',
+    artistName: 'Dj Zavala',
+    artistHandle: 'dj-zavala',
+    artistAvatarUrl: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
+    artistVerified: false,
+    type: 'produto',
+    content: '🎹 Novo Beat disponível na Loja Oficial do ArtistHub: "Amapiano Breeze Pack (WAV + Stems)". Perfeito para quem procura baterias orgânicas e baixos profundos!',
+    mediaUrl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?w=800&auto=format&fit=crop&q=80',
+    relatedId: 'prod-001',
+    metadata: {
+      productPrice: 2500,
+      productCategory: 'beats',
+      audioUrl: 'https://www.soundhelix.com/examples/mp3/SoundHelix-Song-2.mp3',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 36).toISOString(), // 1.5 days ago
+    likesCount: 35,
+    commentsCount: 9,
+  },
+  {
+    id: 'feed-5',
+    artistId: 'artist-001',
+    artistName: 'ArtistHub Convocatórias',
+    artistHandle: 'artisthub',
+    artistAvatarUrl: 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400&auto=format&fit=crop&q=80',
+    artistVerified: true,
+    type: 'oportunidade',
+    content: '🌟 Nova oportunidade aberta: Festival Azgo 2026 está a receber candidaturas de artistas emergentes para o palco Showcase. Submete o teu portfólio diretamente pelo ArtistHub!',
+    mediaUrl: 'https://images.unsplash.com/photo-1470225620780-dba8ba36b745?w=800&auto=format&fit=crop&q=80',
+    relatedId: 'opp-001',
+    metadata: {
+      opportunityOrg: 'Festival Azgo',
+      opportunityCategory: 'festival',
+      opportunityLocation: 'Maputo, Moçambique',
+      opportunityDate: '24-26 Maio 2026',
+    },
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 60).toISOString(), // 2.5 days ago
+    likesCount: 89,
+    commentsCount: 23,
+  },
+];

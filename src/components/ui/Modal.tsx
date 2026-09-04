@@ -6,12 +6,20 @@ export interface ModalProps {
   isOpen?: boolean;
   onClose: () => void;
   title: string;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
   children: React.ReactNode;
 }
 
-export default function Modal({ open, isOpen, onClose, title, children }: ModalProps) {
+export default function Modal({ open, isOpen, onClose, title, size = 'md', children }: ModalProps) {
   const isVisible = open ?? isOpen ?? false;
   if (!isVisible) return null;
+
+  const sizeClasses = {
+    sm: 'max-w-md',
+    md: 'max-w-lg',
+    lg: 'max-w-2xl',
+    xl: 'max-w-3xl',
+  }[size];
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center p-0 sm:p-4">
@@ -20,7 +28,7 @@ export default function Modal({ open, isOpen, onClose, title, children }: ModalP
         onClick={onClose}
         className="absolute inset-0 bg-ink-950/80 backdrop-blur-sm"
       />
-      <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-ink-700 bg-ink-850 p-6 shadow-2xl">
+      <div className={`relative w-full ${sizeClasses} max-h-[90vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl border border-ink-700 bg-ink-850 p-6 shadow-2xl`}>
         <div className="mb-4 flex items-center justify-between sticky top-0 bg-ink-850 pb-2 z-10">
           <h3 className="font-display text-xl text-bone-100">{title}</h3>
           <button

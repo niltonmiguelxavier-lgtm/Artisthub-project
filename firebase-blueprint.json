@@ -45,13 +45,33 @@
         "title": { "type": "string", "maxLength": 256 },
         "coverUrl": { "type": "string", "maxLength": 1024 },
         "audioUrl": { "type": "string", "maxLength": 1024 },
+        "audioFormat": { "type": "string", "enum": ["mp3", "wav"] },
+        "duration": { "type": "number" },
         "type": { "type": "string", "enum": ["single", "ep", "album", "colaboracao"] },
         "releaseDate": { "type": "string", "maxLength": 64 },
         "streams": { "type": "number" },
         "status": { "type": "string", "enum": ["lancada", "agendada", "rascunho"] },
-        "revenue": { "type": "number" }
+        "revenue": { "type": "number" },
+        "isrc": { "type": "string", "maxLength": 64 },
+        "copyrightDate": { "type": "string", "maxLength": 64 },
+        "createdAt": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "artistId", "title", "type", "status"]
+    },
+    "Video": {
+      "title": "Video",
+      "description": "YouTube music video or live performance embedded in artist catalogue",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 256 },
+        "youtubeUrl": { "type": "string", "maxLength": 1024 },
+        "youtubeId": { "type": "string", "maxLength": 64 },
+        "thumbnailUrl": { "type": "string", "maxLength": 1024 },
+        "addedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "artistId", "title", "youtubeUrl", "youtubeId"]
     },
     "Product": {
       "title": "Product",
@@ -119,6 +139,38 @@
         "createdAt": { "type": "string", "maxLength": 64 }
       },
       "required": ["id", "productId", "artistId", "buyerEmail", "amount", "status", "downloadToken", "createdAt"]
+    },
+    "FeedPost": {
+      "title": "FeedPost",
+      "description": "Community timeline post from an artist (song, video, update, product, opportunity)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "artistId": { "type": "string", "maxLength": 128 },
+        "artistName": { "type": "string", "maxLength": 128 },
+        "artistHandle": { "type": "string", "maxLength": 128 },
+        "artistAvatarUrl": { "type": "string", "maxLength": 1024 },
+        "artistVerified": { "type": "boolean" },
+        "type": { "type": "string", "enum": ["musica", "video", "texto", "produto", "oportunidade"] },
+        "content": { "type": "string", "maxLength": 2048 },
+        "mediaUrl": { "type": "string", "maxLength": 1024 },
+        "relatedId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 },
+        "likesCount": { "type": "number" },
+        "commentsCount": { "type": "number" }
+      },
+      "required": ["id", "artistId", "type", "content", "createdAt"]
+    },
+    "FeedLike": {
+      "title": "FeedLike",
+      "description": "Reaction record for a user like on a feed post",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "postId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId", "postId", "createdAt"]
     }
   },
   "firestore": {
@@ -134,6 +186,10 @@
       "schema": "Track",
       "description": "Musical catalogue and releases"
     },
+    "/videos/{videoId}": {
+      "schema": "Video",
+      "description": "YouTube videos embedded by artists"
+    },
     "/products/{productId}": {
       "schema": "Product",
       "description": "Digital store products and beats"
@@ -146,9 +202,33 @@
       "schema": "Submission",
       "description": "Artist applications to opportunities"
     },
+    "/applications/{applicationId}": {
+      "schema": "Submission",
+      "description": "Artist applications to opportunities (alias)"
+    },
+    "/conversations/{conversationId}": {
+      "schema": "Conversation",
+      "description": "Direct chat conversations between artists or organizers"
+    },
+    "/conversations/{conversationId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Individual chat message in conversation"
+    },
+    "/documents/{documentId}": {
+      "schema": "DocumentRecord",
+      "description": "Artist contracts, receipts, and professional documents"
+    },
     "/orders/{orderId}": {
       "schema": "Order",
       "description": "Digital sales and purchase history"
+    },
+    "/feedPosts/{postId}": {
+      "schema": "FeedPost",
+      "description": "Community timeline posts"
+    },
+    "/feedPosts/{postId}/likes/{userId}": {
+      "schema": "FeedLike",
+      "description": "Likes on a community post"
     }
   }
 }

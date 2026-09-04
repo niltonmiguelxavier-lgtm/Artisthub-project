@@ -113,18 +113,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
-      setUser(fbUser);
-      if (fbUser) {
-        await loadArtistData(fbUser.uid, fbUser.email || '', fbUser.displayName || undefined);
-      } else {
-        setUserProfile(null);
-        setArtistProfile(null);
+    let resolved = false;
+
+    // Safety timeout: Ensure loading finishes within 5 seconds even on slow connections/offline
+    const safetyTimer = setTimeout(() => {
+      if (!resolved) {
+        console.warn('Auth state safety timeout triggered, unblocking UI');
+        setLoading(false);
       }
-      setLoading(false);
+    }, 5000);
+
+    const unsubscribe = onAuthStateChanged(auth, async (fbUser) => {
+      try {
+        setUser(fbUser);
+        if (fbUser) {
+          await loadArtistData(fbUser.uid, fbUser.email || '', fbUser.displayName || undefined);
+        } else {
+          setUserProfile(null);
+          setArtistProfile(null);
+        }
+      } catch (err) {
+        console.warn('Error in auth state change listener:', err);
+      } finally {
+        resolved = true;
+        clearTimeout(safetyTimer);
+        setLoading(false);
+      }
     });
 
-    return () => unsubscribe();
+    return () => {
+      clearTimeout(safetyTimer);
+      unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, pass: string) => {

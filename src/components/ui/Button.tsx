@@ -1,6 +1,6 @@
 import React from 'react';
 
-type Variant = 'primary' | 'secondary' | 'ghost' | 'outline';
+type Variant = 'primary' | 'secondary' | 'ghost' | 'outline' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
 
 export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
@@ -14,6 +14,7 @@ export interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElemen
   type?: 'button' | 'submit' | 'reset';
   disabled?: boolean;
   onClick?: React.MouseEventHandler<HTMLButtonElement>;
+  title?: string;
 }
 
 const variantClasses: Record<Variant, string> = {
@@ -21,6 +22,7 @@ const variantClasses: Record<Variant, string> = {
   secondary: 'bg-ink-800 text-bone-100 hover:bg-ink-700 border border-ink-700',
   ghost: 'bg-transparent text-bone-200 hover:bg-ink-800',
   outline: 'bg-transparent text-bone-100 border border-ink-600 hover:border-cobalt-500 hover:text-cobalt-400',
+  danger: 'bg-rose-600 text-bone-100 hover:bg-rose-700 active:bg-rose-800 font-medium',
 };
 
 const sizeClasses: Record<Size, string> = {

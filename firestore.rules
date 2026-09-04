@@ -33,7 +33,13 @@ service cloud.firestore {
       allow create, update, delete: if isSignedIn();
     }
 
-    // YouTube / Media items
+    // Videos (YouTube music videos & performances)
+    match /videos/{videoId} {
+      allow read: if true;
+      allow create, update, delete: if isSignedIn();
+    }
+
+    // YouTube / Media items (legacy alias)
     match /youtube_videos/{videoId} {
       allow read: if true;
       allow create, update, delete: if isSignedIn();
@@ -58,11 +64,45 @@ service cloud.firestore {
       allow delete: if isSignedIn();
     }
 
+    match /applications/{applicationId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn();
+      allow delete: if isSignedIn();
+    }
+
+    // Conversations and direct messages between artists / collaborators
+    match /conversations/{conversationId} {
+      allow read, write: if isSignedIn();
+
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn();
+      }
+    }
+
+    // Artist career documents and contracts
+    match /documents/{documentId} {
+      allow read, write: if isSignedIn();
+    }
+
     // Orders
     match /orders/{orderId} {
       allow read: if true;
       allow create: if true;
       allow update, delete: if isSignedIn();
+    }
+
+    // Community Feed Posts (Public read for timeline, artist create/edit/delete, users can like)
+    match /feedPosts/{postId} {
+      allow read: if true;
+      allow create: if isSignedIn();
+      allow update: if isSignedIn();
+      allow delete: if isSignedIn();
+
+      // Likes subcollection (User can read and write their own like document)
+      match /likes/{userId} {
+        allow read: if true;
+        allow write: if isOwner(userId);
+      }
     }
   }
 }

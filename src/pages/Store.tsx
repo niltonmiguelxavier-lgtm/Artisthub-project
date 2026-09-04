@@ -8,9 +8,12 @@ import Modal from '../components/ui/Modal';
 import Badge from '../components/ui/Badge';
 import EmptyState from '../components/ui/EmptyState';
 import EmailVerificationPromptModal from '../components/EmailVerificationPromptModal';
-import { ShoppingBag, Music2, Disc, Shirt, Plus, Play, Pause, Download, ExternalLink, Sparkles, CheckCircle2 } from 'lucide-react';
+import PageLoadingError from '../components/ui/PageLoadingError';
+import ZumboPayModal from '../components/payment/ZumboPayModal';
+import { ShoppingBag, Music2, Disc, Shirt, Plus, Play, Pause, Download, ExternalLink, Sparkles, CheckCircle2, RefreshCw } from 'lucide-react';
 import type { Product, ProductCategory } from '../types';
 import { formatCurrency } from '../utils/format';
+import { createFeedPost } from '../services/feedService';
 
 const sampleProducts: Product[] = [
   {
@@ -72,7 +75,8 @@ export default function Store() {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isVerifyPromptOpen, setIsVerifyPromptOpen] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
+  const [error, setError] = useState<string | null>(null);
 
   // New product form
   const [newTitle, setNewTitle] = useState('');
@@ -81,6 +85,7 @@ export default function Store() {
   const [newPrice, setNewPrice] = useState('1500');
   const [newCover, setNewCover] = useState('');
   const [checkoutLoading, setCheckoutLoading] = useState<string | null>(null);
+  const [selectedProductForPayment, setSelectedProductForPayment] = useState<Product | null>(null);
 
   const artistId = artistProfile?.id || user?.uid || 'artist-001';
   const commissionRate = 0.12; // 12% platform fee
@@ -94,23 +99,43 @@ export default function Store() {
     setIsAddModalOpen(true);
   };
 
-  useEffect(() => {
-    const loadProducts = async () => {
-      try {
-        setLoading(true);
-        const pSnap = await getDocs(collection(db, 'products'));
+  const loadProducts = async () => {
+    let cancelled = false;
+    let timer: NodeJS.Timeout | null = null;
+
+    try {
+      setStatus('loading');
+      setError(null);
+
+      timer = setTimeout(() => {
+        if (!cancelled && status === 'loading') {
+          setError('Isto está a demorar mais do que o esperado. Tenta novamente.');
+          setStatus('error');
+        }
+      }, 15000);
+
+      const pSnap = await getDocs(collection(db, 'products'));
+      if (!cancelled) {
         if (!pSnap.empty) {
           const prods = pSnap.docs.map((d) => ({ id: d.id, ...d.data() } as Product));
           setProducts(prods);
         } else {
           setProducts(sampleProducts);
         }
-      } catch (e) {
-        setProducts(sampleProducts);
-      } finally {
-        setLoading(false);
+        setStatus('success');
       }
-    };
+    } catch (e: any) {
+      if (!cancelled) {
+        console.warn('Store fetch error fallback:', e);
+        setProducts(sampleProducts);
+        setStatus('success');
+      }
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
+  };
+
+  useEffect(() => {
     loadProducts();
   }, []);
 
@@ -134,6 +159,24 @@ export default function Store() {
 
     try {
       await setDoc(doc(db, 'products', pId), p);
+
+      // Automatically publish to Community Feed
+      createFeedPost({
+        artistId,
+        artistName: artistProfile?.stageName || user?.displayName || 'Artista',
+        artistHandle: artistProfile?.handle || 'artista',
+        artistAvatarUrl: artistProfile?.avatarUrl,
+        artistVerified: artistProfile?.verified || false,
+        type: 'produto',
+        content: `🛍️ Novo produto na Loja Oficial: "${p.title}" (${p.category.toUpperCase()}) por ${formatCurrency(p.price)}. Já podes adquirir e descarregar!`,
+        mediaUrl: p.coverUrl,
+        relatedId: pId,
+        metadata: {
+          productPrice: p.price,
+          productCategory: p.category,
+          audioUrl: p.previewAudioUrl,
+        },
+      }).catch((err) => console.warn('Could not auto-post product to feed:', err));
     } catch (e) {}
 
     setProducts((prev) => [p, ...prev]);
@@ -142,7 +185,51 @@ export default function Store() {
     setNewDesc('');
   };
 
-  const handleCheckout = async (product: Product) => {
+  const handleCheckout = (product: Product) => {
+    // Open ZumboPay modal with M-Pesa, e-Mola, and Card
+    setSelectedProductForPayment(product);
+  };
+
+  const handlePaymentSuccess = async (paymentInfo: {
+    reference: string;
+    channel: string;
+    amount: number;
+    phone?: string;
+  }) => {
+    if (!selectedProductForPayment) return;
+    const prod = selectedProductForPayment;
+    const orderId = 'ord_' + Math.random().toString(36).substring(2, 10);
+    const commission = Math.round(prod.price * commissionRate);
+    const artistPayout = prod.price - commission;
+
+    try {
+      await setDoc(doc(db, 'orders', orderId), {
+        id: orderId,
+        productId: prod.id,
+        productTitle: prod.title,
+        amount: prod.price,
+        currency: 'MZN',
+        platformCommission: commission,
+        artistPayout: artistPayout,
+        artistId: prod.artistId,
+        buyerEmail: user?.email || 'cliente@artisthub.mz',
+        buyerPhone: paymentInfo.phone || null,
+        paymentMethod: `zumbopay_${paymentInfo.channel}`,
+        paymentReference: paymentInfo.reference,
+        status: 'completed',
+        createdAt: new Date().toISOString(),
+      });
+    } catch (e) {
+      console.warn('Could not save order to Firestore:', e);
+    }
+
+    setSelectedProductForPayment(null);
+    window.location.href = `/store/success?orderId=${orderId}&productId=${prod.id}&title=${encodeURIComponent(
+      prod.title
+    )}&price=${prod.price}&category=${prod.category}&artistId=${prod.artistId}&method=${paymentInfo.channel}&zumbopay_ref=${paymentInfo.reference}`;
+  };
+
+  const handleStripeCheckout = async (product: Product) => {
     try {
       setCheckoutLoading(product.id);
       const res = await fetch('/api/create-product-checkout', {
@@ -164,14 +251,13 @@ export default function Store() {
       if (data.url) {
         window.location.href = data.url;
       } else if (data.simulated) {
-        // Direct redirect to success in development mode
         window.location.href = `/store/success?orderId=${data.downloadToken}&productId=${product.id}&title=${encodeURIComponent(
           product.title
-        )}&price=${product.price}&category=${product.category}&artistId=${product.artistId}`;
+        )}&price=${product.price}&category=${product.category}&artistId=${product.artistId}&method=stripe`;
       }
     } catch (err) {
       console.error(err);
-      alert('Não foi possível iniciar o checkout.');
+      alert('Não foi possível iniciar o checkout via Stripe.');
     } finally {
       setCheckoutLoading(null);
     }
@@ -225,7 +311,14 @@ export default function Store() {
       </div>
 
       {/* Products Grid */}
-      {filteredProducts.length === 0 ? (
+      {status === 'loading' ? (
+        <div className="flex flex-col items-center justify-center py-12 gap-3 text-xs text-bone-400">
+          <RefreshCw size={22} className="animate-spin text-cobalt-400" />
+          <span>A carregar catálogo de produtos e beats...</span>
+        </div>
+      ) : status === 'error' ? (
+        <PageLoadingError error={error} onRetry={loadProducts} />
+      ) : filteredProducts.length === 0 ? (
         <EmptyState
           title="Nenhum produto nesta categoria"
           description="Adiciona o teu primeiro beat, faixa exclusiva ou artigo de merchandise."
@@ -333,7 +426,7 @@ export default function Store() {
             </select>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Input
               id="prod-price"
               label="Preço (MT) *"
@@ -377,6 +470,29 @@ export default function Store() {
           </div>
         </form>
       </Modal>
+
+      {/* ZumboPay Checkout Modal for M-Pesa, e-Mola, and Cards */}
+      {selectedProductForPayment && (
+        <ZumboPayModal
+          isOpen={!!selectedProductForPayment}
+          onClose={() => setSelectedProductForPayment(null)}
+          title={selectedProductForPayment.title}
+          amount={selectedProductForPayment.price}
+          currency="MZN"
+          orderType="store_product"
+          orderId={selectedProductForPayment.id}
+          metadata={{
+            artistId: selectedProductForPayment.artistId,
+            category: selectedProductForPayment.category,
+          }}
+          onSuccess={handlePaymentSuccess}
+          onStripeFallback={() => {
+            const prod = selectedProductForPayment;
+            setSelectedProductForPayment(null);
+            handleStripeCheckout(prod);
+          }}
+        />
+      )}
 
       <EmailVerificationPromptModal
         isOpen={isVerifyPromptOpen}
