@@ -73,8 +73,8 @@ export function parseAuthError(err: any): AuthErrorResult {
   if (code === 'auth/operation-not-allowed') {
     return {
       isCancellation: false,
-      message: 'Método de autenticação não ativado na consola.',
-      details: 'Por favor utiliza o botão "Continuar com o Google" ou contacta o suporte.',
+      message: 'O método de início de sessão com Email/Palavra-passe não está ativado.',
+      details: 'Para permitir login por email, é necessário ativar o fornecedor "Email/Palavra-passe" na consola Firebase (Authentication > Métodos de início de sessão).',
     };
   }
 

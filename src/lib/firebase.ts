@@ -65,8 +65,9 @@ const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
 
 export const auth = getAuth(app);
 
-// Initialize Firestore with specific database ID and robust long-polling auto-detection for iframe environments
-const customDatabaseId = (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) || fallbackConfig.firestoreDatabaseId;
+// Initialize Firestore with specific database ID or default, with robust long-polling auto-detection
+const rawDbId = (import.meta.env.VITE_FIREBASE_DATABASE_ID as string) || fallbackConfig.firestoreDatabaseId;
+const customDatabaseId = (rawDbId && rawDbId !== '(default)' && rawDbId.trim() !== '') ? rawDbId.trim() : undefined;
 
 let firestoreInstance;
 try {
@@ -76,7 +77,7 @@ try {
       experimentalAutoDetectLongPolling: true,
       ignoreUndefinedProperties: true,
     },
-    customDatabaseId || undefined
+    customDatabaseId
   );
 } catch {
   firestoreInstance = customDatabaseId ? getFirestore(app, customDatabaseId) : getFirestore(app);

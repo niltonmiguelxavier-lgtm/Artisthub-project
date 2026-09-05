@@ -7,6 +7,32 @@ import { createServer as createViteServer } from 'vite';
 const app = express();
 const PORT = 3000;
 
+// Configure CORS for web clients, including Vercel deployment and local development
+app.use((req, res, next) => {
+  const allowedOrigins = [
+    'https://artisthub-projectn.vercel.app',
+    'http://localhost:3000',
+    'http://localhost:5173',
+  ];
+  const origin = req.headers.origin;
+  if (origin && (allowedOrigins.includes(origin) || origin.endsWith('.vercel.app'))) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  } else {
+    res.setHeader('Access-Control-Allow-Origin', '*');
+  }
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.setHeader(
+    'Access-Control-Allow-Headers',
+    'Content-Type, Authorization, X-Requested-With, Idempotency-Key, X-Merchant-Id, X-ZumboPay-Client, Accept'
+  );
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(204);
+  }
+  next();
+});
+
 // Capture raw body for HMAC-SHA256 signature verification in webhooks
 app.use(
   express.json({
